@@ -11,7 +11,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -23,6 +22,7 @@ public class FlagService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final AuditService auditService;
     private final ObjectMapper objectMapper;
+    private final NotificationService notificationService;
 
     private static final String FLAG_CACHE_PREFIX = "flag:";
     private static final long CACHE_TTL = 300; // 5 minutes
@@ -69,6 +69,7 @@ public class FlagService {
         Flag saved = flagRepository.save(flag);
         auditService.logAction("FLAG", saved.getId(), "CREATE", userId, null, saved);
         invalidateCache(saved.getId(), saved.getKey());
+        notificationService.broadcast("FLAG_CREATED", saved.getKey(), saved);
         return saved;
     }
 
@@ -89,6 +90,7 @@ public class FlagService {
         Flag updated = flagRepository.save(existing);
         auditService.logAction("FLAG", id, "UPDATE", userId, existing, updated);
         invalidateCache(id, updated.getKey());
+        notificationService.broadcast("FLAG_UPDATED", updated.getKey(), updated);
         return updated;
     }
 

@@ -10,7 +10,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -21,6 +20,7 @@ public class ConfigService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final AuditService auditService;
     private final ObjectMapper objectMapper;
+    private final NotificationService notificationService;
 
     private static final String CONFIG_CACHE_PREFIX = "config:";
     private static final long CACHE_TTL = 600; // 10 minutes
@@ -51,6 +51,7 @@ public class ConfigService {
         Config saved = configRepository.save(config);
         auditService.logAction("CONFIG", saved.getId(), "CREATE", userId, null, saved);
         redisTemplate.delete(CONFIG_CACHE_PREFIX + saved.getKey());
+        notificationService.broadcast("CONFIG_CREATED", saved.getKey(), saved);
         return saved;
     }
 
@@ -69,6 +70,7 @@ public class ConfigService {
         Config updated = configRepository.save(existing);
         auditService.logAction("CONFIG", id, "UPDATE", userId, existing, updated);
         redisTemplate.delete(CONFIG_CACHE_PREFIX + updated.getKey());
+        notificationService.broadcast("CONFIG_UPDATED", updated.getKey(), updated);
         return updated;
     }
 }
