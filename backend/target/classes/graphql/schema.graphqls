@@ -1,0 +1,65 @@
+type Query {
+    flags(page: Int, size: Int): FlagPage!
+    flag(id: ID, key: String): Flag
+    configs(page: Int, size: Int): ConfigPage!
+    config(key: String!): Config
+    auditLogs(page: Int, size: Int): AuditLogPage!
+}
+
+type Mutation {
+    toggleFlag(id: ID!): Flag!
+    updateConfig(key: String!, value: String!): Config!
+}
+
+type Flag {
+    id: ID!
+    key: String!
+    name: String!
+    description: String
+    enabled: Boolean!
+    archived: Boolean!
+    createdAt: String!
+    updatedAt: String!
+    version: Int!
+}
+
+type Config {
+    id: ID!
+    key: String!
+    name: String!
+    description: String
+    value: String!
+    configType: String!
+    environment: String!
+    createdAt: String!
+    updatedAt: String!
+    version: Int!
+}
+
+type AuditLog {
+    id: ID!
+    entityType: String!
+    entityId: String!
+    action: String!
+    userId: String
+    metadata: String
+    createdAt: String!
+}
+
+type FlagPage {
+    content: [Flag!]!
+    totalElements: Int!
+    totalPages: Int!
+}
+
+type ConfigPage {
+    content: [Config!]!
+    totalElements: Int!
+    totalPages: Int!
+}
+
+type AuditLogPage {
+    content: [AuditLog!]!
+    totalElements: Int!
+    totalPages: Int!
+}

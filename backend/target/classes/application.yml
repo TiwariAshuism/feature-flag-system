@@ -1,6 +1,9 @@
-spring:
   application:
     name: feature-flag-service
+  
+  graphql:
+    graphiql:
+      enabled: true
   
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/feature_flags}
