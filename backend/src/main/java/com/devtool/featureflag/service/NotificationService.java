@@ -1,6 +1,7 @@
 package com.devtool.featureflag.service;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -31,8 +32,10 @@ public class NotificationService {
         return emitter;
     }
 
+    @Async
     public void broadcast(String type, String key, Object payload) {
-        log.info("Broadcasting event: {}: {}", type, key);
+        log.info("Broadcasting event asynchronously on thread: {}. {}: {}",
+                Thread.currentThread().getName(), type, key);
 
         List<SseEmitter> deadEmitters = new CopyOnWriteArrayList<>();
 
