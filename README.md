@@ -6,6 +6,8 @@ A robust, enterprise-grade system for managing feature toggles and dynamic runti
 
 - **Real-time Synchronization (SSE)**: Instant "push" updates to all connected clients via Server-Sent Events.
 - **GraphQL API**: Flexible and efficient data retrieval with an interactive **GraphiQL** playground.
+- **gRPC Service**: High-performance binary communication on port **9090** for low-latency inter-service lookups.
+- **Asynchronous Processing**: Non-blocking audit logging and notifications offloaded to a custom thread pool.
 - **Server-Side Pagination**: Standard `Pageable` support for Flags, Configs, and Audit Logs to handle large datasets.
 - **Dynamic Configurations**: Manage non-boolean settings (Strings, Numbers, JSON) with instant Redis-backed lookups.
 - **High Performance Caching**: Redis integration with automated cache invalidation on any change.
@@ -16,7 +18,7 @@ A robust, enterprise-grade system for managing feature toggles and dynamic runti
 ## 🛠 Tech Stack
 
 - **Frontend**: Next.js 14 (App Router), TypeScript, Tailwind CSS, SWR, Lucide Icons.
-- **Backend**: Spring Boot 3.2, Spring GraphQL, Java 17, Hibernate, Flyway.
+- **Backend**: Spring Boot 3.2, Spring GraphQL, gRPC (io.grpc), Java 17, Hibernate, Flyway.
 - **Data Layers**: PostgreSQL (Persistence), Redis (Caching), Jedis.
 - **DevOps**: Docker & Docker Compose.
 
@@ -33,6 +35,7 @@ docker-compose up -d --build
 Access Points:
 - **Admin Dashboard**: [http://localhost:3000](http://localhost:3000)
 - **GraphQL Playground (GraphiQL)**: [http://localhost:8080/graphiql](http://localhost:8080/graphiql)
+- **gRPC Server**: `localhost:9090`
 - **REST Backend**: [http://localhost:8080/api](http://localhost:8080/api)
 - **Real-time Event Stream**: `GET http://localhost:8080/api/stream/events`
 
@@ -55,6 +58,16 @@ query {
 Test the update stream in your terminal:
 ```bash
 curl -N -H "Accept: text/event-stream" http://localhost:8080/api/stream/events
+```
+
+### 🏎️ gRPC High-Performance
+The gRPC server supports reflection. You can use `grpcurl` to test:
+```bash
+# List services
+grpcurl -plaintext localhost:9090 list
+
+# Get a flag by key
+grpcurl -plaintext -d '{"key": "YOUR_FLAG_KEY"}' localhost:9090 com.devtool.featureflag.grpc.FeatureFlagService/GetFlag
 ```
 
 ### 🧪 Utility Scripts
