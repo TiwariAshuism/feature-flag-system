@@ -109,6 +109,7 @@ public class FlagService {
         Flag updated = flagRepository.save(flag);
         auditService.logAction("FLAG", id, updated.getEnabled() ? "ENABLE" : "DISABLE", userId, flag, updated);
         invalidateCache(id, updated.getKey());
+        notificationService.broadcast("FLAG_TOGGLED", updated.getKey(), updated);
         return updated;
     }
 

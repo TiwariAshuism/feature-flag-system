@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package com.devtool.featureflag.grpc;
+
+option java_multiple_files = true;
+option java_package = "com.devtool.featureflag.grpc";
+option java_outer_classname = "FeatureFlagProto";
+
+service FeatureFlagService {
+    rpc GetFlag (GetFlagRequest) returns (FlagResponse);
+    rpc GetAllFlags (GetAllFlagsRequest) returns (FlagsPageResponse);
+    rpc ToggleFlag (ToggleFlagRequest) returns (FlagResponse);
+}
+
+message GetFlagRequest {
+    string id = 1;
+    string key = 2;
+}
+
+message GetAllFlagsRequest {
+    int32 page = 1;
+    int32 size = 2;
+}
+
+message ToggleFlagRequest {
+    string id = 1;
+    string user_id = 2;
+}
+
+message FlagResponse {
+    string id = 1;
+    string key = 2;
+    string name = 3;
+    string description = 4;
+    bool enabled = 5;
+    bool archived = 6;
+    string created_at = 7;
+    string updated_at = 8;
+    int32 version = 9;
+}
+
+message FlagsPageResponse {
+    repeated FlagResponse content = 1;
+    int32 total_elements = 2;
+    int32 total_pages = 3;
+}

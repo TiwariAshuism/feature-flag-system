@@ -49,6 +49,8 @@ public class Flag {
     @OneToMany(mappedBy = "flag", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RolloutRule> rolloutRules = new ArrayList<>();
 
+    private Integer version = 1;
+
     public enum FlagType {
         BOOLEAN, STRING, NUMBER, JSON
     }
