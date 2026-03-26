@@ -20,14 +20,20 @@ import {
 } from 'lucide-react';
 import { cn, formatDate } from '@/lib/utils';
 import api from '@/lib/api';
+import { ConfigItem } from '@/lib/types';
+import { useToast } from '@/components/ui/ToastProvider';
+import { useAppContext } from '@/components/ui/AppContextProvider';
 
 export default function ConfigDetailPage() {
     const { id } = useParams();
     const router = useRouter();
-    const { data: config, isLoading } = useSWR(`/api/configs/${id}`, fetcher);
-    const [formData, setFormData] = useState<any>(null);
+    const { data: config, isLoading } = useSWR<ConfigItem>(`/api/configs/${id}`, fetcher);
+    const [formData, setFormData] = useState<ConfigItem | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [copied, setCopied] = useState(false);
+    const { error: showError, success } = useToast();
+    const { userName, environment } = useAppContext();
 
     useEffect(() => {
         if (config) {
@@ -39,26 +45,39 @@ export default function ConfigDetailPage() {
         setIsSaving(true);
         try {
             await api.put(`/api/configs/${id}`, formData);
-            mutate(`/api/configs/${id}`);
+            await mutate(`/api/configs/${id}`);
+            await mutate(
+                (key) =>
+                    typeof key === 'string' && key.startsWith('/api/configs?page=')
+            );
+            success('Configuration updated.');
             setIsSaving(false);
         } catch (error) {
-            console.error('Failed to update config:', error);
+            showError('Failed to save configuration.');
             setIsSaving(false);
         }
     };
 
     const handleDelete = async () => {
         if (confirm('Are you sure you want to delete this configuration? This cannot be undone.')) {
+            setIsDeleting(true);
             try {
                 await api.delete(`/api/configs/${id}`);
+                await mutate(
+                    (key) =>
+                        typeof key === 'string' && key.startsWith('/api/configs?page=')
+                );
+                success('Configuration deleted.');
                 router.push('/configs');
             } catch (error) {
-                console.error('Failed to delete config:', error);
+                showError('Failed to delete configuration.');
+                setIsDeleting(false);
             }
         }
     };
 
     const copyToClipboard = () => {
+        if (!formData) return;
         navigator.clipboard.writeText(formData.key);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -74,7 +93,7 @@ export default function ConfigDetailPage() {
 
     return (
         <>
-            <Header title={`Config: ${config.key}`} />
+            <Header title={`Config: ${formData.key}`} />
             <div className="flex-1 overflow-y-auto bg-[#0b0f1a] p-8">
                 <div className="max-w-5xl mx-auto">
 
@@ -95,7 +114,9 @@ export default function ConfigDetailPage() {
                                 <div className="flex items-center gap-3 mb-2">
                                     <h1 className="text-4xl font-black text-white tracking-tighter">{formData.key}</h1>
                                     <button
+                                        aria-label="Copy configuration key"
                                         onClick={copyToClipboard}
+                                        type="button"
                                         className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-500 hover:text-primary transition-all"
                                     >
                                         {copied ? <Check className="size-4 text-emerald-500" /> : <Copy className="size-4" />}
@@ -142,6 +163,7 @@ export default function ConfigDetailPage() {
 
                                 <div className="relative group">
                                     <textarea
+                                        aria-label="Configuration value"
                                         className="w-full bg-[#111827] border border-slate-800 rounded-2xl p-6 font-mono text-sm text-slate-200 focus:ring-2 focus:ring-primary/40 focus:border-primary outline-none transition-all min-h-[300px] resize-none overflow-y-auto"
                                         value={formData.value}
                                         onChange={(e) => setFormData({ ...formData, value: e.target.value })}
@@ -181,15 +203,19 @@ if (configValue) {
                                     <div>
                                         <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Last Modified By</p>
                                         <div className="flex items-center gap-2">
-                                            <div className="size-6 bg-slate-700 rounded-full flex items-center justify-center text-[10px] font-bold text-white uppercase">A</div>
-                                            <p className="text-slate-300 text-sm font-medium">Alex Chen</p>
+                                                <div className="size-6 bg-slate-700 rounded-full flex items-center justify-center text-[10px] font-bold text-white uppercase">
+                                                    {userName.charAt(0)}
+                                                </div>
+                                                <p className="text-slate-300 text-sm font-medium">{userName}</p>
                                         </div>
                                     </div>
                                     <div>
                                         <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Data Source</p>
                                         <div className="flex items-center gap-2">
                                             <Database className="size-4 text-emerald-500" />
-                                            <p className="text-slate-300 text-sm font-medium">PostgreSQL + Redis Cache</p>
+                                            <p className="text-slate-300 text-sm font-medium">
+                                                PostgreSQL + Redis Cache ({environment})
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -200,6 +226,7 @@ if (configValue) {
                                 <p className="text-slate-500 text-xs mb-6">Deleting this config will remove it from Redis and Postgres. This may cause runtime errors in clients if they expect this key.</p>
                                 <button
                                     onClick={handleDelete}
+                                    disabled={isDeleting}
                                     className="w-full bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 px-4 py-3 rounded-xl text-xs font-black transition-all uppercase tracking-widest"
                                 >
                                     Delete Configuration

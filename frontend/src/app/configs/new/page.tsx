@@ -16,10 +16,12 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
+import { useToast } from '@/components/ui/ToastProvider';
 
 export default function NewConfigPage() {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const { error: showError, success } = useToast();
     const [formData, setFormData] = useState({
         key: '',
         name: '',
@@ -33,12 +35,18 @@ export default function NewConfigPage() {
         try {
             // Ensure value is sent in a format the backend expects for JsonNode if type is JSON
             // For now backend uses JsonNode, so we might need to parse it if it's JSON type
-            let payload: any = { ...formData };
+            let payload: {
+                key: string;
+                name: string;
+                description: string;
+                value: unknown;
+                configType: string;
+            } = { ...formData, value: formData.value };
             if (formData.configType === 'JSON') {
                 try {
                     payload.value = JSON.parse(formData.value);
-                } catch (e) {
-                    console.error('Invalid JSON value');
+                } catch {
+                    showError('Invalid JSON format.');
                     setIsSubmitting(false);
                     return;
                 }
@@ -47,9 +55,10 @@ export default function NewConfigPage() {
             }
 
             await api.post('/api/configs', payload);
+            success('Configuration created.');
             router.push('/configs');
         } catch (error) {
-            console.error('Failed to create config:', error);
+            showError('Failed to create configuration. Please retry.');
             setIsSubmitting(false);
         }
     };
@@ -74,6 +83,8 @@ export default function NewConfigPage() {
                                 <span className="text-slate-500 cursor-help"><Info className="size-4" /></span>
                             </label>
                             <input
+                                aria-label="Configuration key"
+                                id="config-key"
                                 className="w-full rounded-xl text-white focus:ring-2 focus:ring-primary/20 border border-slate-800 bg-slate-900/50 h-14 placeholder:text-slate-600 px-4 text-base transition-all outline-none focus:border-primary font-mono"
                                 placeholder="e.g. MAX_RETRY_COUNT"
                                 autoFocus
@@ -87,6 +98,8 @@ export default function NewConfigPage() {
                                 Display Name
                             </label>
                             <input
+                                aria-label="Configuration display name"
+                                id="config-name"
                                 className="w-full rounded-xl text-white focus:ring-2 focus:ring-primary/20 border border-slate-800 bg-slate-900/50 h-14 placeholder:text-slate-600 px-4 text-base transition-all outline-none focus:border-primary"
                                 placeholder="e.g. Max Retry Count"
                                 value={formData.name}
@@ -102,6 +115,8 @@ export default function NewConfigPage() {
                             Description
                         </label>
                         <input
+                            aria-label="Configuration description"
+                            id="config-description"
                             className="w-full rounded-xl text-white focus:ring-2 focus:ring-primary/20 border border-slate-800 bg-slate-900/50 h-14 placeholder:text-slate-600 px-4 text-base transition-all outline-none focus:border-primary"
                             placeholder="What is this configuration used for?"
                             value={formData.description}
@@ -117,6 +132,7 @@ export default function NewConfigPage() {
                                 <button
                                     key={type}
                                     onClick={() => setFormData({ ...formData, configType: type })}
+                                    type="button"
                                     className={cn(
                                         "p-4 rounded-xl border text-center transition-all",
                                         formData.configType === type
@@ -135,6 +151,7 @@ export default function NewConfigPage() {
                         <label className="text-slate-200 text-sm font-bold">Value</label>
                         {formData.configType === 'JSON' ? (
                             <textarea
+                                aria-label="Configuration JSON value"
                                 className="w-full rounded-xl text-white font-mono border border-slate-800 bg-slate-900/50 min-h-[150px] p-4 text-sm transition-all outline-none focus:border-primary"
                                 placeholder='{ "timeout": 5000 }'
                                 value={formData.value}
@@ -142,6 +159,7 @@ export default function NewConfigPage() {
                             />
                         ) : (
                             <input
+                                aria-label="Configuration value"
                                 className="w-full rounded-xl text-white border border-slate-800 bg-slate-900/50 h-14 px-4 text-base outline-none focus:border-primary"
                                 type={formData.configType === 'NUMBER' ? 'number' : 'text'}
                                 placeholder="Enter value..."
@@ -155,6 +173,7 @@ export default function NewConfigPage() {
                 <div className="flex items-center justify-between max-w-2xl mx-auto mt-10">
                     <button
                         onClick={() => router.back()}
+                        type="button"
                         className="flex items-center gap-2 px-6 py-3 text-slate-400 hover:text-white font-bold transition-colors group"
                     >
                         <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" />
@@ -164,6 +183,7 @@ export default function NewConfigPage() {
                     <button
                         disabled={!formData.key || !formData.name || !formData.value || isSubmitting}
                         onClick={handleCreate}
+                        type="button"
                         className="flex items-center gap-2 px-10 py-3 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl transition-all shadow-lg shadow-primary/20 disabled:opacity-50 disabled:shadow-none group"
                     >
                         {isSubmitting ? <Loader2 className="size-5 animate-spin" /> : (

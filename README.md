@@ -34,6 +34,7 @@ docker-compose up -d --build
 
 Access Points:
 - **Admin Dashboard**: [http://localhost:3000](http://localhost:3000)
+- **Client App (Sample Consumer)**: [http://localhost:3001](http://localhost:3001)
 - **GraphQL Playground (GraphiQL)**: [http://localhost:8080/graphiql](http://localhost:8080/graphiql)
 - **gRPC Server**: `localhost:9090`
 - **REST Backend**: [http://localhost:8080/api](http://localhost:8080/api)
@@ -79,6 +80,7 @@ Populate the system with complex testing data:
 ## 🏗 Project Structure
 
 - `frontend/`: Next.js admin dashboard.
+- `client-app/`: Next.js sample client consuming flags/configs.
 - `backend/`: Spring Boot high-performance service.
 - `seed_configs.sh`: Automated configuration seeder.
 - `feature-flag-system.postman_collection.json`: Postman collection for REST APIs.

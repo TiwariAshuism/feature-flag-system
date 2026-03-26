@@ -10,31 +10,51 @@ import {
     Filter,
     Edit,
     Trash2,
-    ChevronLeft,
-    ChevronRight,
     Flag as FlagIcon,
-    Activity
+    Activity,
 } from 'lucide-react';
-import { cn, formatDate } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import api from '@/lib/api';
+import { useToast } from '@/components/ui/ToastProvider';
+import { FeatureFlag, PageResponse } from '@/lib/types';
+import PaginationControls from '@/components/ui/PaginationControls';
+import { useAppContext } from '@/components/ui/AppContextProvider';
 
 export default function FlagsPage() {
     const [page, setPage] = useState(0);
-    const { data, isLoading } = useSWR(`/api/flags?page=${page}&size=10`, fetcher);
+    const swrKey = `/api/flags?page=${page}&size=10`;
+    const { data, isLoading } = useSWR<PageResponse<FeatureFlag>>(swrKey, fetcher);
     const flags = data?.content;
     const [searchQuery, setSearchQuery] = useState('');
+    const { error: showError, success } = useToast();
+    const { environment } = useAppContext();
 
     const toggleFlag = async (id: string) => {
         try {
             await api.post(`/api/flags/${id}/toggle`);
-            mutate('/api/flags');
+            await mutate(swrKey);
+            success('Flag updated successfully.');
         } catch (error) {
-            console.error('Failed to toggle flag:', error);
+            showError('Could not update flag. Please retry.');
         }
     };
 
-    const filteredFlags = flags?.filter((flag: any) =>
+    const deleteFlag = async (id: string, name: string) => {
+        if (!confirm(`Delete flag "${name}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            await api.delete(`/api/flags/${id}`);
+            await mutate(swrKey);
+            success('Flag deleted successfully.');
+        } catch {
+            showError('Could not delete flag. Please retry.');
+        }
+    };
+
+    const filteredFlags = flags?.filter((flag) =>
         flag.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         flag.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
         flag.tags?.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -50,7 +70,7 @@ export default function FlagsPage() {
                     <div className="flex flex-col gap-1">
                         <h2 className="text-white text-3xl font-black tracking-tight">Feature Flags</h2>
                         <p className="text-slate-400 text-sm font-medium">
-                            Showing {filteredFlags?.length || 0} active flags across Production
+                            Showing {filteredFlags?.length || 0} active flags across {environment}
                         </p>
                     </div>
                     <Link href="/flags/new" className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-primary/20">
@@ -66,6 +86,7 @@ export default function FlagsPage() {
                             <Search className="text-slate-500 size-5 group-focus-within:text-primary transition-colors" />
                         </div>
                         <input
+                            aria-label="Search feature flags"
                             className="w-full pl-12 pr-4 py-3 bg-[#111827] border-none focus:ring-2 focus:ring-primary/40 rounded-xl text-sm text-white placeholder:text-slate-500 transition-all outline-none"
                             placeholder="Search flags by name, key, or tag..."
                             type="text"
@@ -74,7 +95,11 @@ export default function FlagsPage() {
                         />
                     </div>
                     <div className="flex items-center gap-2 pr-2">
-                        <button className="flex items-center gap-2 px-4 py-3 bg-[#111827] hover:bg-slate-800 rounded-xl text-sm font-semibold text-slate-400 transition-colors border border-slate-800">
+                        <button
+                            aria-label="Filter flags by status"
+                            className="flex items-center gap-2 px-4 py-3 bg-[#111827] hover:bg-slate-800 rounded-xl text-sm font-semibold text-slate-400 transition-colors border border-slate-800"
+                            type="button"
+                        >
                             <Filter className="size-4" />
                             Status: All
                         </button>
@@ -103,7 +128,7 @@ export default function FlagsPage() {
                                     </td>
                                 </tr>
                             )}
-                            {filteredFlags?.map((flag: any) => (
+                            {filteredFlags?.map((flag) => (
                                 <tr key={flag.id} className="hover:bg-slate-800/30 transition-colors">
                                     <td className="px-6 py-5">
                                         <div className="flex flex-col">
@@ -121,7 +146,11 @@ export default function FlagsPage() {
                                     <td className="px-6 py-5">
                                         <div className="flex justify-center">
                                             <button
+                                                aria-checked={flag.enabled}
+                                                aria-label={`Toggle ${flag.name}`}
+                                                role="switch"
                                                 onClick={() => toggleFlag(flag.id)}
+                                                type="button"
                                                 className={cn(
                                                     "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ring-2 ring-offset-2 ring-offset-[#1a1426] ring-transparent focus:ring-primary/40",
                                                     flag.enabled ? "bg-primary" : "bg-slate-700"
@@ -153,7 +182,12 @@ export default function FlagsPage() {
                                             <Link href={`/flags/${flag.id}`} className="p-1.5 text-slate-500 hover:text-primary transition-colors">
                                                 <Edit className="size-4" />
                                             </Link>
-                                            <button className="p-1.5 text-slate-500 hover:text-destructive transition-colors">
+                                            <button
+                                                aria-label={`Delete ${flag.name}`}
+                                                className="p-1.5 text-slate-500 hover:text-destructive transition-colors"
+                                                onClick={() => deleteFlag(flag.id, flag.name)}
+                                                type="button"
+                                            >
                                                 <Trash2 className="size-4" />
                                             </button>
                                         </div>
@@ -176,22 +210,12 @@ export default function FlagsPage() {
                         <span className="text-xs font-medium text-slate-500">
                             Page {page + 1} of {data?.totalPages || 1} ({data?.totalElements || 0} total)
                         </span>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setPage(p => Math.max(0, p - 1))}
-                                disabled={page === 0}
-                                className="p-2 border border-slate-800 rounded-lg text-slate-400 hover:bg-slate-800 disabled:opacity-30"
-                            >
-                                <ChevronLeft className="size-4" />
-                            </button>
-                            <button
-                                onClick={() => setPage(p => p + 1)}
-                                disabled={page >= (data?.totalPages || 1) - 1}
-                                className="p-2 border border-slate-800 rounded-lg text-slate-400 hover:bg-slate-800 disabled:opacity-30"
-                            >
-                                <ChevronRight className="size-4" />
-                            </button>
-                        </div>
+                        <PaginationControls
+                            onNext={() => setPage((p) => p + 1)}
+                            onPrevious={() => setPage((p) => Math.max(0, p - 1))}
+                            page={page}
+                            totalPages={data?.totalPages || 1}
+                        />
                     </div>
                 </div>
             </div>

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import api from '@/lib/api';
+import { useToast } from '@/components/ui/ToastProvider';
 
 const steps = [
     { id: 'basic', label: 'Basic Info', icon: Info },
@@ -28,6 +29,7 @@ export default function NewFlagPage() {
     const router = useRouter();
     const [currentStep, setCurrentStep] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const { error: showError, success } = useToast();
     const [formData, setFormData] = useState({
         name: '',
         key: '',
@@ -53,9 +55,10 @@ export default function NewFlagPage() {
                 ...formData,
                 tags: formData.tags.length > 0 ? formData.tags : null
             });
+            success('Feature flag created.');
             router.push('/flags');
         } catch (error) {
-            console.error('Failed to create flag:', error);
+            showError('Failed to create flag. Please try again.');
             setIsSubmitting(false);
         }
     };
@@ -106,6 +109,8 @@ export default function NewFlagPage() {
                                     <span className="text-slate-500 cursor-help"><Info className="size-4" /></span>
                                 </label>
                                 <input
+                                    aria-label="Flag name"
+                                    id="flag-name"
                                     className="w-full rounded-xl text-white focus:ring-2 focus:ring-primary/20 border border-slate-800 bg-slate-900/50 h-14 placeholder:text-slate-600 px-4 text-base transition-all outline-none focus:border-primary"
                                     placeholder="e.g. New Checkout Beta"
                                     autoFocus
@@ -121,6 +126,8 @@ export default function NewFlagPage() {
                                 </label>
                                 <div className="relative">
                                     <input
+                                        aria-label="Auto generated flag key"
+                                        id="flag-key"
                                         className="w-full rounded-xl text-slate-400 border border-slate-800 bg-slate-900/20 h-14 px-4 text-base font-mono outline-none cursor-not-allowed"
                                         placeholder="new-checkout-beta"
                                         readOnly
@@ -128,12 +135,14 @@ export default function NewFlagPage() {
                                     />
                                     <Lock className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-700 size-5" />
                                 </div>
-                                <p className="text-slate-600 text-xs">The key is used to reference the flag in your code. It's generated from the name.</p>
+                                <p className="text-slate-600 text-xs">The key is used to reference the flag in your code. It is generated from the name.</p>
                             </div>
 
                             <div className="flex flex-col gap-2">
                                 <label className="text-slate-200 text-sm font-bold">Description</label>
                                 <textarea
+                                    aria-label="Flag description"
+                                    id="flag-description"
                                     className="w-full rounded-xl text-white focus:ring-2 focus:ring-primary/20 border border-slate-800 bg-slate-900/50 min-h-[120px] placeholder:text-slate-600 p-4 text-base resize-none transition-all outline-none focus:border-primary"
                                     placeholder="What does this feature flag control?"
                                     value={formData.description}
@@ -147,7 +156,11 @@ export default function NewFlagPage() {
                                     <span className="text-slate-500 text-xs font-medium">Flag will be active immediately upon creation.</span>
                                 </div>
                                 <button
+                                    aria-checked={formData.enabled}
+                                    aria-label="Toggle enabled by default"
+                                    role="switch"
                                     onClick={() => setFormData({ ...formData, enabled: !formData.enabled })}
+                                    type="button"
                                     className={cn(
                                         "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ring-2 ring-offset-2 ring-offset-[#1f2937] ring-transparent focus:ring-primary/40",
                                         formData.enabled ? "bg-primary" : "bg-slate-700"
@@ -171,6 +184,7 @@ export default function NewFlagPage() {
                                         <button
                                             key={type}
                                             onClick={() => setFormData({ ...formData, flagType: type, defaultValue: type === 'BOOLEAN' ? 'false' : '' })}
+                                            type="button"
                                             className={cn(
                                                 "p-4 rounded-xl border text-left transition-all group",
                                                 formData.flagType === type
@@ -197,6 +211,7 @@ export default function NewFlagPage() {
                                             <button
                                                 key={val}
                                                 onClick={() => setFormData({ ...formData, defaultValue: val })}
+                                                type="button"
                                                 className={cn(
                                                     "flex-1 py-3 rounded-xl border font-bold transition-all",
                                                     formData.defaultValue === val
@@ -284,6 +299,7 @@ export default function NewFlagPage() {
                 <div className="flex items-center justify-between max-w-2xl mx-auto mt-10">
                     <button
                         onClick={() => currentStep === 0 ? router.back() : setCurrentStep(currentStep - 1)}
+                        type="button"
                         className="flex items-center gap-2 px-6 py-3 text-slate-400 hover:text-white font-bold transition-colors group"
                     >
                         <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" />
@@ -293,6 +309,7 @@ export default function NewFlagPage() {
                     <button
                         disabled={currentStep === 0 && !formData.name || isSubmitting}
                         onClick={() => currentStep === steps.length - 1 ? handleCreate() : setCurrentStep(currentStep + 1)}
+                        type="button"
                         className="flex items-center gap-2 px-10 py-3 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl transition-all shadow-lg shadow-primary/20 disabled:opacity-50 disabled:shadow-none group"
                     >
                         {isSubmitting ? <Loader2 className="size-5 animate-spin" /> : (

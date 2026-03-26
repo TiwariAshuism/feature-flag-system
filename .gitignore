@@ -38,6 +38,21 @@ frontend/yarn-error.log*
 frontend/.pnp*
 frontend/.pnp.js
 
+
+# Node (cleint)
+client-app/node_modules/
+client-app/.next/
+client-app/out/
+client-app/dist/
+client-app/.env.local
+client-app/.env.development.local
+client-app/.env.test.local
+client-app/.env.production.local
+client-app/npm-debug.log*
+client-app/yarn-debug.log*
+client-app/yarn-error.log*
+client-app/.pnp*
+client-app/.pnp.js
 # Docker
 .docker/
 # (If you decide to use local volume mapping later)

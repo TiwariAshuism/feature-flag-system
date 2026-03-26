@@ -22,7 +22,12 @@ public class ConfigController {
         return configService.getAllConfigs(pageable);
     }
 
-    @GetMapping("/{key}")
+    @GetMapping("/{id}")
+    public ResponseEntity<Config> getConfigById(@PathVariable UUID id) {
+        return ResponseEntity.ok(configService.getConfigById(id));
+    }
+
+    @GetMapping("/key/{key}")
     public ResponseEntity<Config> getConfigByKey(@PathVariable String key) {
         return ResponseEntity.ok(configService.getConfigByKey(key));
     }
@@ -35,5 +40,11 @@ public class ConfigController {
     @PutMapping("/{id}")
     public ResponseEntity<Config> updateConfig(@PathVariable UUID id, @RequestBody Config config) {
         return ResponseEntity.ok(configService.updateConfig(id, config, "system-user"));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteConfig(@PathVariable UUID id) {
+        configService.deleteConfig(id, "system-user");
+        return ResponseEntity.noContent().build();
     }
 }

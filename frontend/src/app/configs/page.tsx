@@ -11,23 +11,47 @@ import {
     Edit,
     Trash2,
     Settings,
-    ChevronLeft,
-    ChevronRight,
-    Database
+    Database,
 } from 'lucide-react';
-import { cn, formatDate } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 import Link from 'next/link';
+import { ConfigItem, PageResponse } from '@/lib/types';
+import PaginationControls from '@/components/ui/PaginationControls';
+import { useAppContext } from '@/components/ui/AppContextProvider';
+import { useToast } from '@/components/ui/ToastProvider';
+import api from '@/lib/api';
+import { mutate } from 'swr';
 
 export default function ConfigsPage() {
     const [page, setPage] = useState(0);
-    const { data, isLoading } = useSWR(`/api/configs?page=${page}&size=9`, fetcher);
+    const swrKey = `/api/configs?page=${page}&size=9`;
+    const { data, isLoading } = useSWR<PageResponse<ConfigItem>>(
+        swrKey,
+        fetcher
+    );
     const configs = data?.content;
     const [searchQuery, setSearchQuery] = useState('');
+    const { environment } = useAppContext();
+    const { success, error: showError } = useToast();
 
-    const filteredConfigs = configs?.filter((config: any) =>
+    const filteredConfigs = configs?.filter((config) =>
         config.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        config.value.toLowerCase().includes(searchQuery.toLowerCase())
+        String(config.value).toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    const deleteConfig = async (id: string, key: string) => {
+        if (!confirm(`Delete config "${key}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            await api.delete(`/api/configs/${id}`);
+            await mutate(swrKey);
+            success('Configuration deleted successfully.');
+        } catch {
+            showError('Could not delete configuration. Please retry.');
+        }
+    };
 
     return (
         <>
@@ -39,7 +63,7 @@ export default function ConfigsPage() {
                     <div className="flex flex-col gap-1">
                         <h2 className="text-white text-3xl font-black tracking-tight">System Configs</h2>
                         <p className="text-slate-400 text-sm font-medium">
-                            Manage non-boolean runtime settings and values.
+                            Manage non-boolean runtime settings for {environment}.
                         </p>
                     </div>
                     <Link href="/configs/new" className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-primary/20">
@@ -55,6 +79,7 @@ export default function ConfigsPage() {
                             <Search className="text-slate-500 size-5 group-focus-within:text-primary transition-colors" />
                         </div>
                         <input
+                            aria-label="Search configurations"
                             className="w-full pl-12 pr-4 py-3 bg-[#111827] border-none focus:ring-2 focus:ring-primary/40 rounded-xl text-sm text-white placeholder:text-slate-500 transition-all outline-none"
                             placeholder="Search configs by key or value..."
                             type="text"
@@ -73,13 +98,18 @@ export default function ConfigsPage() {
                         </div>
                     )}
 
-                    {filteredConfigs?.map((config: any) => (
+                    {filteredConfigs?.map((config) => (
                         <div key={config.id} className="bg-[#1f2937]/50 border border-slate-800 rounded-2xl p-6 hover:border-primary/50 transition-all group relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-4 flex gap-2 translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all">
                                 <Link href={`/configs/${config.id}`} className="p-1.5 bg-slate-800 hover:bg-primary/20 text-slate-400 hover:text-primary rounded-lg">
                                     <Edit className="size-4" />
                                 </Link>
-                                <button className="p-1.5 bg-slate-800 hover:bg-destructive/20 text-slate-400 hover:text-destructive rounded-lg">
+                                <button
+                                    aria-label={`Delete config ${config.key}`}
+                                    className="p-1.5 bg-slate-800 hover:bg-destructive/20 text-slate-400 hover:text-destructive rounded-lg"
+                                    onClick={() => deleteConfig(config.id, config.key)}
+                                    type="button"
+                                >
                                     <Trash2 className="size-4" />
                                 </button>
                             </div>
@@ -129,22 +159,12 @@ export default function ConfigsPage() {
                     <span className="text-xs font-medium text-slate-500">
                         Page {page + 1} of {data?.totalPages || 1} ({data?.totalElements || 0} total)
                     </span>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setPage(p => Math.max(0, p - 1))}
-                            disabled={page === 0}
-                            className="p-2 border border-slate-800 rounded-lg text-slate-400 hover:bg-slate-800 disabled:opacity-30 transition-all font-bold"
-                        >
-                            <ChevronLeft className="size-4" />
-                        </button>
-                        <button
-                            onClick={() => setPage(p => p + 1)}
-                            disabled={page >= (data?.totalPages || 1) - 1}
-                            className="p-2 border border-slate-800 rounded-lg text-slate-400 hover:bg-slate-800 disabled:opacity-30 transition-all font-bold"
-                        >
-                            <ChevronRight className="size-4" />
-                        </button>
-                    </div>
+                        <PaginationControls
+                            onNext={() => setPage((p) => p + 1)}
+                            onPrevious={() => setPage((p) => Math.max(0, p - 1))}
+                            page={page}
+                            totalPages={data?.totalPages || 1}
+                        />
                 </div>
             </div>
         </>

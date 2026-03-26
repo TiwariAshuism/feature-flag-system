@@ -22,14 +22,20 @@ import {
 } from 'lucide-react';
 import { cn, formatDate } from '@/lib/utils';
 import api from '@/lib/api';
+import { FeatureFlag } from '@/lib/types';
+import { useToast } from '@/components/ui/ToastProvider';
+import { useAppContext } from '@/components/ui/AppContextProvider';
 
 export default function FlagDetailPage() {
     const { id } = useParams();
     const router = useRouter();
-    const { data: flag, isLoading } = useSWR(`/api/flags/${id}`, fetcher);
+    const { data: flag, isLoading } = useSWR<FeatureFlag>(`/api/flags/${id}`, fetcher);
     const [activeTab, setActiveTab] = useState('targeting');
-    const [formData, setFormData] = useState<any>(null);
+    const [formData, setFormData] = useState<FeatureFlag | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const { error: showError, success } = useToast();
+    const { environment } = useAppContext();
 
     useEffect(() => {
         if (flag) {
@@ -41,21 +47,33 @@ export default function FlagDetailPage() {
         setIsSaving(true);
         try {
             await api.put(`/api/flags/${id}`, formData);
-            mutate(`/api/flags/${id}`);
+            await mutate(`/api/flags/${id}`);
+            await mutate(
+                (key) =>
+                    typeof key === 'string' && key.startsWith('/api/flags?page=')
+            );
+            success('Flag changes saved.');
             setIsSaving(false);
         } catch (error) {
-            console.error('Failed to update flag:', error);
+            showError('Failed to save changes. Please retry.');
             setIsSaving(false);
         }
     };
 
     const handleDelete = async () => {
         if (confirm('Are you sure you want to delete this flag? This cannot be undone.')) {
+            setIsDeleting(true);
             try {
                 await api.delete(`/api/flags/${id}`);
+                await mutate(
+                    (key) =>
+                        typeof key === 'string' && key.startsWith('/api/flags?page=')
+                );
+                success('Flag deleted.');
                 router.push('/flags');
             } catch (error) {
-                console.error('Failed to delete flag:', error);
+                showError('Could not delete flag. Please retry.');
+                setIsDeleting(false);
             }
         }
     };
@@ -77,7 +95,7 @@ export default function FlagDetailPage() {
 
     return (
         <>
-            <Header title={`Flag: ${flag.name}`} />
+            <Header title={`Flag: ${formData.name}`} />
             <div className="flex-1 overflow-y-auto bg-[#0b0f1a]">
 
                 {/* Flag Hero Header */}
@@ -97,22 +115,22 @@ export default function FlagDetailPage() {
                             </div>
                             <div className="flex flex-col">
                                 <div className="flex items-center gap-3 mb-1">
-                                    <h1 className="text-3xl font-black text-white tracking-tight">{flag.name}</h1>
+                                    <h1 className="text-3xl font-black text-white tracking-tight">{formData.name}</h1>
                                     <span className={cn(
                                         "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
-                                        flag.enabled ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-red-500/10 text-red-500 border-red-500/20"
+                                        formData.enabled ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-red-500/10 text-red-500 border-red-500/20"
                                     )}>
-                                        {flag.enabled ? 'Live' : 'Off'}
+                                        {formData.enabled ? 'Live' : 'Off'}
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <code className="text-primary font-mono text-sm font-bold">{flag.key}</code>
+                                    <code className="text-primary font-mono text-sm font-bold">{formData.key}</code>
                                     <span className="text-slate-600">•</span>
-                                    <span className="text-slate-500 text-sm font-medium">{flag.flagType} Flag</span>
+                                    <span className="text-slate-500 text-sm font-medium">{formData.flagType} Flag</span>
                                     <span className="text-slate-600">•</span>
                                     <span className="text-slate-500 text-sm font-medium flex items-center gap-1">
                                         <Clock className="size-3" />
-                                        Updated {formatDate(flag.updatedAt)}
+                                        Updated {formatDate(formData.updatedAt)}
                                     </span>
                                 </div>
                             </div>
@@ -129,6 +147,7 @@ export default function FlagDetailPage() {
                             </button>
                             <button
                                 onClick={handleDelete}
+                                disabled={isDeleting}
                                 className="p-2.5 bg-slate-800 hover:bg-destructive/20 text-slate-500 hover:text-destructive border border-slate-700 rounded-xl transition-all"
                             >
                                 <Trash2 className="size-5" />
@@ -173,7 +192,7 @@ export default function FlagDetailPage() {
                                             Healthy
                                         </div>
                                     </div>
-                                    <p className="text-slate-400 font-medium text-sm">Control the visibility of this flag for all users in production.</p>
+                                    <p className="text-slate-400 font-medium text-sm">Control the visibility of this flag for all users in {environment.toLowerCase()}.</p>
                                 </div>
                                 <div className="flex items-center gap-4">
                                     <div className="text-right">
@@ -183,7 +202,11 @@ export default function FlagDetailPage() {
                                         </p>
                                     </div>
                                     <button
+                                        aria-checked={formData.enabled}
+                                        aria-label={`Toggle ${formData.name}`}
+                                        role="switch"
                                         onClick={() => setFormData({ ...formData, enabled: !formData.enabled })}
+                                        type="button"
                                         className={cn(
                                             "relative inline-flex h-10 w-20 items-center rounded-full transition-all focus:outline-none ring-4 ring-offset-4 ring-offset-[#0b0f1a] ring-transparent",
                                             formData.enabled ? "bg-primary shadow-lg shadow-primary/40 ring-primary/20" : "bg-slate-700"
@@ -237,6 +260,7 @@ export default function FlagDetailPage() {
                                                 <button
                                                     key={val}
                                                     onClick={() => setFormData({ ...formData, defaultValue: val })}
+                                            type="button"
                                                     className={cn(
                                                         "relative p-6 rounded-2xl border transition-all text-left group overflow-hidden",
                                                         formData.defaultValue === val ? "bg-primary/10 border-primary" : "bg-slate-900/50 border-slate-800 hover:border-slate-700"

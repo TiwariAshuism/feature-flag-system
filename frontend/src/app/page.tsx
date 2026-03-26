@@ -1,6 +1,7 @@
 'use client';
 
 import useSWR from 'swr';
+import { ComponentType } from 'react';
 import { fetcher } from '@/lib/api';
 import Header from '@/components/layout/Header';
 import {
@@ -17,8 +18,17 @@ import {
 } from 'lucide-react';
 import { cn, formatDate } from '@/lib/utils';
 import Link from 'next/link';
+import { AuditLog, FeatureFlag, ConfigItem, PageResponse } from '@/lib/types';
 
-function StatCard({ label, value, trend, icon: Icon, trendColor }: any) {
+interface StatCardProps {
+    label: string;
+    value: number;
+    trend?: string;
+    icon: ComponentType<{ className?: string }>;
+    trendColor: string;
+}
+
+function StatCard({ label, value, trend, icon: Icon, trendColor }: StatCardProps) {
     return (
         <div className="bg-[#1f2937] p-6 rounded-xl border border-slate-800 flex flex-col gap-1 shadow-sm hover:border-slate-700 transition-colors group">
             <div className="flex justify-between items-start mb-2">
@@ -41,9 +51,9 @@ function StatCard({ label, value, trend, icon: Icon, trendColor }: any) {
 }
 
 export default function Dashboard() {
-    const { data: flagData } = useSWR('/api/flags?size=1', fetcher);
-    const { data: configData } = useSWR('/api/configs?size=1', fetcher);
-    const { data: logData } = useSWR('/api/audit?size=5&sort=createdAt,desc', fetcher);
+    const { data: flagData } = useSWR<PageResponse<FeatureFlag>>('/api/flags?size=1', fetcher);
+    const { data: configData } = useSWR<PageResponse<ConfigItem>>('/api/configs?size=1', fetcher);
+    const { data: logData } = useSWR<PageResponse<AuditLog>>('/api/audit?size=5&sort=createdAt,desc', fetcher);
 
     const recentLogs = logData?.content;
     const activeFlags = flagData?.totalElements || 0; // Approximate for now
@@ -81,10 +91,13 @@ export default function Dashboard() {
                             <Settings className="size-5" />
                             Create New Config
                         </Link>
-                        <button className="flex items-center gap-2 bg-[#1f2937] hover:bg-slate-700 text-white border border-slate-800 px-5 py-2.5 rounded-xl font-bold transition-all">
+                        <Link
+                            className="flex items-center gap-2 bg-[#1f2937] hover:bg-slate-700 text-white border border-slate-800 px-5 py-2.5 rounded-xl font-bold transition-all"
+                            href="/health"
+                        >
                             <Zap className="size-5" />
                             System Health
-                        </button>
+                        </Link>
                     </div>
                 </section>
 
@@ -99,7 +112,7 @@ export default function Dashboard() {
                     </div>
 
                     <div className="divide-y divide-slate-800">
-                        {recentLogs?.slice(0, 5).map((log: any) => (
+                        {recentLogs?.slice(0, 5).map((log) => (
                             <div key={log.id} className="p-6 flex items-start gap-4 hover:bg-slate-800/50 transition-colors">
                                 <div className="bg-slate-800 size-10 rounded-full flex items-center justify-center text-slate-400">
                                     <User className="size-6" />

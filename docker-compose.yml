@@ -67,6 +67,20 @@ services:
       - "3000:3000"
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8080
+      BACKEND_INTERNAL_URL: http://backend:8080
+    depends_on:
+      - backend
+
+  client-app:
+    build:
+      context: ./client-app
+      dockerfile: Dockerfile
+    container_name: feature-flag-client-app
+    ports:
+      - "3001:3001"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      BACKEND_INTERNAL_URL: http://backend:8080
     depends_on:
       - backend
 

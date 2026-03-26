@@ -31,6 +31,12 @@ public class ConfigService {
     }
 
     @Transactional(readOnly = true)
+    public Config getConfigById(UUID id) {
+        return configRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Config not found: " + id));
+    }
+
+    @Transactional(readOnly = true)
     public Config getConfigByKey(String key) {
         String cacheKey = CONFIG_CACHE_PREFIX + key;
         Object cached = redisTemplate.opsForValue().get(cacheKey);
@@ -72,5 +78,16 @@ public class ConfigService {
         redisTemplate.delete(CONFIG_CACHE_PREFIX + updated.getKey());
         notificationService.broadcast("CONFIG_UPDATED", updated.getKey(), updated);
         return updated;
+    }
+
+    @Transactional
+    public void deleteConfig(UUID id, String userId) {
+        Config existing = configRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Config not found: " + id));
+
+        configRepository.delete(existing);
+        auditService.logAction("CONFIG", id, "DELETE", userId, existing, null);
+        redisTemplate.delete(CONFIG_CACHE_PREFIX + existing.getKey());
+        notificationService.broadcast("CONFIG_DELETED", existing.getKey(), existing);
     }
 }
